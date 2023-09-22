@@ -13,14 +13,11 @@ module svi {
     import tailf-ncs {
         prefix ncs;
     }
-    import ietf-yang-types {
-        prefix yang;
-    }
 
     description
-      "Package description";
+      "This is SVI Python service package.";
 
-    revision 2016-01-01 {
+    revision 2023-09-18 {
         description
           "Initial revision.";
     }
@@ -28,7 +25,7 @@ module svi {
     augment /ncs:services {
         list svi {
             description
-              "Service description";
+              "SVI Python Service";
 
             key name;
             leaf name {
@@ -50,6 +47,8 @@ module svi {
 
             // may replace this with other ways of refering to the devices.
             list device {
+                tailf:info "L3 Switch";
+                key name;
 
                 leaf name {
                     tailf:info "Device name";
@@ -73,7 +72,7 @@ module svi {
                     key "intf-type intf-id";
 
                     leaf intf-type {
-                        tailf:info "Ethernet interface type";
+                        tailf:info "Ethernet Interface Type";
                         type enumeration {
                             enum Ethernet;
                             enum FastEthernet;
@@ -82,7 +81,7 @@ module svi {
                     }
 
                     leaf intf-id {
-                        tailf:info "Ethernet interface id";
+                        tailf:info "Ethernet Interface ID";
                         type string;
                     }
                 }

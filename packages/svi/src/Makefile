@@ -1,4 +1,4 @@
-all: fxs
+all: fxs pylint
 .PHONY: all
 
 # Include standard NCS examples build definitions and rules
@@ -15,6 +15,14 @@ FXS = $(SRC:yang/%.yang=../load-dir/%.fxs)
 
 NCSCPATH   = $(YANGPATH:%=--yangpath %)
 YANGERPATH = $(YANGPATH:%=--path %)
+
+PYLINT = pylint
+PYLINTFLAGS = --disable=R,C --reports=n
+PYDIR = ../python/svi
+PYTHONFILES = $(wildcard $(PYDIR)/*.py)
+pylint:$(patsubst %.py,%.pylint,$(PYTHONFILES))
+%.pylint:
+	$(PYLINT) $(PYLINTFLAGS) $*.py || (test $$? -ge 4)
 
 fxs: $(DIRS) $(FXS)
 

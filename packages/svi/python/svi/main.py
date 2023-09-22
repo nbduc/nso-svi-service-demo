@@ -1,7 +1,7 @@
 # -*- mode: python; python-indent: 4 -*-
 import ncs
 from ncs.application import Service
-from ncs.dp import Action
+import netaddr
 
 
 # ------------------------
@@ -15,10 +15,40 @@ class ServiceCallbacks(Service):
     def cb_create(self, tctx, root, service, proplist):
         self.log.info('Service create(service=', service._path, ')')
 
-        vars = ncs.template.Variables()
-        vars.add('VALUE', '127.0.0.1')
-        template = ncs.template.Template(service)
-        template.apply('svi', vars)
+        svi = {
+            'vlan-id': "",
+            'svi-device': "",
+            'ip-prefix': "",
+            'ip-addr': "",
+            'netmask': ""
+        }
+        
+        svi['vlan-id'] = service.vlan_id
+        
+        for device in service.device:
+            self.log.info('SVI device = ', device.name)
+            
+            ip_net = netaddr.IPNetwork(device.ip_prefix)
+            svi['svi-device'] = device.name
+            svi['ip-prefix'] = str(ip_net[2]) + "/" + str(ip_net.prefixlen)
+            svi['ip-addr'] = str(ip_net[1])
+            svi['netmask'] = str(ip_net.netmask)
+            
+            svi_tvars = ncs.template.Variables()
+            svi_tvars.add('VLAN-ID', svi['vlan-id'])
+            svi_tvars.add('SVI-DEVICE', svi['svi-device'])
+            svi_tvars.add('IP-PREFIX', svi['ip-prefix'])
+            svi_tvars.add('IP-ADDR', svi['ip-addr'])
+            svi_tvars.add('NETMASK', svi['netmask'])
+            
+            svi_template = ncs.template.Template(service)
+            svi_template.apply('svi-intf-template', svi_tvars)
+        
+        vlan_tvars = ncs.template.Variables()
+        vlan_tvars.add('VLAN-ID', svi['vlan-id'])
+        
+        vlan_template = ncs.template.Template(service)
+        vlan_template.apply('svi-vlan-template', vlan_tvars)
 
     # The pre_modification() and post_modification() callbacks are optional,
     # and are invoked outside FASTMAP. pre_modification() is invoked before
@@ -38,19 +68,6 @@ class ServiceCallbacks(Service):
     #     self.log.info('Service postmod(service=', kp, ')')
 
 
-# ------------------------
-# ACTION CALLBACK EXAMPLE
-# ------------------------
-class SelfTestAction(ncs.dp.Action):
-
-    @Action.action
-    def cb_action(self, uinfo, name, kp, input, output):
-        service_instance_key = kp[0]
-        output.success = True
-        output.message = service_instance_key
-        return
-
-
 # ---------------------------------------------
 # COMPONENT THREAD THAT WILL BE STARTED BY NCS.
 # ---------------------------------------------
@@ -64,7 +81,6 @@ class Main(ncs.application.Application):
         # as specified in the corresponding data model.
         #
         self.register_service('svi-servicepoint', ServiceCallbacks)
-        self.register_action('svi-selftest', SelfTestAction)
 
         # If we registered any callback(s) above, the Application class
         # took care of creating a daemon (related to the service/action point).
